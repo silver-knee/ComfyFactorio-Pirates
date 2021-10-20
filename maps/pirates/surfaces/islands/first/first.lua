@@ -87,6 +87,8 @@ function Public.terrain(args)
 			end
 		end
 	end
+	
+	
 end
 
 
@@ -111,7 +113,75 @@ end
 
 
 function Public.generate_silo_position()
-	return Hunt.free_position_1()
+	local memory = Memory.get_crew_memory()
+	local enemy_force_name = memory.enemy_force_name
+	local destination = Common.current_destination()
+	local surface = game.surfaces[destination.surface_name]
+	-- local boatposition = memory.boat.position
+	-- local boatposition = memory.boat.position
+	local island_center = destination.static_params.islandcenter_position
+	local i
+	local x
+	local y
+	local wall_distance
+	local max_wall_distance=14
+	local wall_distance_step=7
+
+	local p = {
+		x = island_center.x,
+		y = island_center.y,
+		r = 50
+	}
+	
+	local turrets={}
+	
+	local area=surface.find_entities({{p.x-20,p.y-20},{p.x+20,p.y+20}})
+	for i=1,#area
+	do
+		area[i].destroy()
+	end
+
+	local tiles={}
+	for x=-max_wall_distance,max_wall_distance
+	do
+		for y=-max_wall_distance,max_wall_distance
+		do
+			tiles[#tiles+1]={position={p.x+x,p.y+y},name="refined-concrete"}
+		end
+	end	
+	
+	surface.set_tiles(tiles, true, true)
+	
+	for wall_distance=wall_distance_step,max_wall_distance,wall_distance_step
+	do
+		for i=-wall_distance+1,wall_distance-1
+		do
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x+i,p.y-wall_distance-1}}
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x+i,p.y-wall_distance}} 
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x+i,p.y+wall_distance+1}}
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x+i,p.y+wall_distance}}
+		end		
+
+		for i=-wall_distance+1,wall_distance-1
+		do
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x-wall_distance-1,p.y+i}} 
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x-wall_distance,p.y+i}} 
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x+wall_distance+1,p.y+i}}
+			surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {p.x+wall_distance,p.y+i}}
+		end
+		
+		turrets[#turrets+1] = surface.create_entity{name = "gun-turret", force=enemy_force_name, position = {p.x+wall_distance+1,p.y+wall_distance+1}}
+		turrets[#turrets+1] = surface.create_entity{name = "gun-turret", force=enemy_force_name, position = {p.x+wall_distance+1,p.y-wall_distance}}
+		turrets[#turrets+1] = surface.create_entity{name = "gun-turret", force=enemy_force_name, position = {p.x-wall_distance,p.y+wall_distance+1}}
+		turrets[#turrets+1] = surface.create_entity{name = "gun-turret", force=enemy_force_name, position = {p.x-wall_distance,p.y-wall_distance}}
+	end
+	
+	for i=1,#turrets
+	do
+		turrets[i].insert({name="firearm-magazine", count=200})
+	end
+	
+	return p
 end
 
 

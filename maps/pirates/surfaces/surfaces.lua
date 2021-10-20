@@ -285,7 +285,7 @@ function Public.destination_on_arrival(destination)
 
 		if destination.subtype ~= Islands.enum.RADIOACTIVE then
 			local silo_position = Islands.spawn_silo_setup()
-			points_to_avoid[#points_to_avoid + 1] = {x = silo_position.x, y = silo_position.y, r = 22}
+			points_to_avoid[#points_to_avoid + 1] = {x = silo_position.x, y = silo_position.y, r = silo_position.r}
 		end
 
 		Islands.spawn_ores_on_shorehit(destination, points_to_avoid)
