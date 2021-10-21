@@ -123,17 +123,19 @@ function Public.generate_silo_position()
 	local island_center = destination.static_params.islandcenter_position
 	local i, x,	y, item
 	local wall_distance
-	local max_wall_distance=16
-	local wall_distance_step=8
+	local wall_distance_step=9
+	local max_wall_distance=wall_distance_step*2
 	local lawn_mower=5
 	local doorway=2
 	local turrets={}
 
 	local p = {
-		x = island_center.x,
-		y = island_center.y,
+		x = math.floor(island_center.x),
+		y = math.floor(island_center.y),
 		r = max_wall_distance*3
 	}
+	
+	game.print(island_center.x .. " - " .. island_center.y)
 	
 	local area=surface.find_entities({{p.x-max_wall_distance-lawn_mower,p.y-max_wall_distance-lawn_mower},{p.x+max_wall_distance+lawn_mower,p.y+max_wall_distance+lawn_mower}})
 	for i=1,#area
@@ -160,6 +162,7 @@ function Public.generate_silo_position()
 	
 		for i=-wall_distance+1,wall_distance-1
 		do
+			-- is math.abs() unnecessary slow here?
 			if i>=-doorway and i<=doorway
 			then
 				item="gate"
@@ -187,7 +190,9 @@ function Public.generate_silo_position()
 			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x+wall_distance,p.y+i}}
 		end
 		--small-worm-turret
-		
+		game.print(p.x+wall_distance+1 .. " - " .. p.y+wall_distance+1)
+		-- 136,9 -- 144,17 position correct, walls around turret off
+
 		ring_turrets[1] = create_turret(surface,enemy_force_name,p.x+wall_distance+1,p.y+wall_distance+1)
 		ring_turrets[2] = create_turret(surface,enemy_force_name,p.x+wall_distance+1,p.y-wall_distance)
 		ring_turrets[3] = create_turret(surface,enemy_force_name,p.x-wall_distance  ,p.y+wall_distance+1)
@@ -199,10 +204,10 @@ function Public.generate_silo_position()
 			turrets[#turrets+1] = ring_turrets[i]
 		end
 		
-		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {p.x+Math.random(-wall_distance-4,wall_distance+5),p.y-wall_distance-4}}
-		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {p.x+Math.random(-wall_distance-4,wall_distance+5),p.y+wall_distance+5}}
-		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {p.x-wall_distance-4,p.y+Math.random(-wall_distance-4,wall_distance+5)}}
-		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {p.x+wall_distance+5,p.y+Math.random(-wall_distance-4,wall_distance+5)}}
+		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {p.x+Math.random(-wall_distance+4,wall_distance-5),p.y-wall_distance-4}}
+		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {p.x+Math.random(-wall_distance+4,wall_distance-5),p.y+wall_distance+5}}
+		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {p.x-wall_distance-4,p.y+Math.random(-wall_distance+4,wall_distance-5)}}
+		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {p.x+wall_distance+5,p.y+Math.random(-wall_distance+4,wall_distance-5)}}
 		
 		rings[#rings+1]={
 			ring_turrets=ring_turrets,
@@ -224,7 +229,7 @@ end
 function create_turret(surface,enemy_force_name,x,y)
 	local turret=surface.create_entity{name = "gun-turret", force=enemy_force_name, position = {x,y}}
 	
-	for i=-1,2
+	for i=-2,1
 	do
 		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x+i,y-2}}
 		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x+i,y+1}}
@@ -232,8 +237,8 @@ function create_turret(surface,enemy_force_name,x,y)
 		
 	for i=-1,0
 	do
-		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x-1,y+i}}
-		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x+2,y+i}}
+		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x-2,y+i}}
+		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x+1,y+i}}
 	end
 	
 	return turret

@@ -5,7 +5,7 @@ local Math = require 'maps.pirates.math'
 
 local Public = {}
 
-Public.display_names = {'Fledgling Vale'}
+Public.display_names = {'Fortress'}
 
 Public.terraingen_frame_width = 325
 Public.terraingen_frame_height = 325
