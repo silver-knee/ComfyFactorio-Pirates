@@ -27,6 +27,7 @@ Public[enum.RADIOACTIVE] = require 'maps.pirates.surfaces.islands.radioactive.ra
 Public[enum.RED_DESERT] = require 'maps.pirates.surfaces.islands.red_desert.red_desert'
 Public[enum.HORSESHOE] = require 'maps.pirates.surfaces.islands.horseshoe.horseshoe'
 Public[enum.SWAMP] = require 'maps.pirates.surfaces.islands.swamp.swamp'
+Public[enum.FORTRESS] = require 'maps.pirates.surfaces.islands.fortress.fortress'
 Public['IslandsCommon'] = require 'maps.pirates.surfaces.islands.common'
 
 
