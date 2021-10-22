@@ -5,9 +5,24 @@ local event = require 'utils.event'
 
 local Public = {}
 
-function Public.create_fortress(center_x,center_y,wall_distance_step,layers)
-	if wall_distance_step < 5 then wall_distance_step = 5 end
-	if layers < 1 then layers=1 end
+local turret_levels={
+	{"gun-turret","firearm-magazine"}, -- no spawners
+	{"gun-turret","firearm-magazine"}, -- only biter spawners
+	{"gun-turret","firearm-magazine"}, -- biter/spitter spawners
+	{"gun-turret","firearm-magazine"},
+	{"small-worm-turret"},
+	{"gun-turret","piercing-rounds-magazine"},
+	{"medium-worm-turret"},
+	{"gun-turret","uranium-rounds-magazine"},
+	{"big-worm-turret"},
+	{"behemoth-worm-turret"}
+}
+
+function Public.create_fortress(center_x,center_y,wall_distance_step,layers,level)
+	if (wall_distance_step or 0) < 5 then wall_distance_step = 5 end
+	if (layers or 0) < 1 then layers=1 end
+	if (level or 0) < 1 then level=1 end
+	if level > #turret_levels then level=turret_levels end
 
 	local memory = Memory.get_crew_memory()
 	local enemy_force_name = memory.enemy_force_name
@@ -73,12 +88,11 @@ function Public.create_fortress(center_x,center_y,wall_distance_step,layers)
 			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {center_x+wall_distance+1,center_y+i}}
 			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {center_x+wall_distance,center_y+i}}
 		end
-		--small-worm-turret
 
-		ring_turrets[1] = create_turret(surface,enemy_force_name,center_x+wall_distance+1,center_y+wall_distance+1)
-		ring_turrets[2] = create_turret(surface,enemy_force_name,center_x+wall_distance+1,center_y-wall_distance)
-		ring_turrets[3] = create_turret(surface,enemy_force_name,center_x-wall_distance  ,center_y+wall_distance+1)
-		ring_turrets[4] = create_turret(surface,enemy_force_name,center_x-wall_distance  ,center_y-wall_distance)
+		ring_turrets[1] = create_turret(surface,turret_levels[level][1],enemy_force_name,center_x+wall_distance+1,center_y+wall_distance+1)
+		ring_turrets[2] = create_turret(surface,turret_levels[level][1],enemy_force_name,center_x+wall_distance+1,center_y-wall_distance)
+		ring_turrets[3] = create_turret(surface,turret_levels[level][1],enemy_force_name,center_x-wall_distance  ,center_y+wall_distance+1)
+		ring_turrets[4] = create_turret(surface,turret_levels[level][1],enemy_force_name,center_x-wall_distance  ,center_y-wall_distance)
 		
 		
 		for i=1,#ring_turrets
@@ -86,10 +100,16 @@ function Public.create_fortress(center_x,center_y,wall_distance_step,layers)
 			turrets[#turrets+1] = ring_turrets[i]
 		end
 		
-		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {center_x+Math.random(-wall_distance+4,wall_distance-5),center_y-wall_distance-4}}
-		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {center_x+Math.random(-wall_distance+4,wall_distance-5),center_y+wall_distance+5}}
-		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {center_x-wall_distance-4,center_y+Math.random(-wall_distance+4,wall_distance-5)}}
-		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {center_x+wall_distance+5,center_y+Math.random(-wall_distance+4,wall_distance-5)}}
+		if level > 1
+		then 
+			surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {center_x-wall_distance-4,center_y+Math.random(-wall_distance+4,wall_distance-5)}}
+			surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {center_x+wall_distance+5,center_y+Math.random(-wall_distance+4,wall_distance-5)}}
+		end
+		if level > 2
+		then
+			surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {center_x+Math.random(-wall_distance+4,wall_distance-5),center_y-wall_distance-4}}
+			surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {center_x+Math.random(-wall_distance+4,wall_distance-5),center_y+wall_distance+5}}
+		end
 		
 		rings[#rings+1]={
 			ring_turrets=ring_turrets,
@@ -97,9 +117,12 @@ function Public.create_fortress(center_x,center_y,wall_distance_step,layers)
 		}
 	end
 		
-	for i=1,#turrets
-	do
-		turrets[i].insert({name="firearm-magazine", count=200})
+	if turret_levels[level][2] 
+	then
+		for i=1,#turrets
+		do
+			turrets[i].insert({name=turret_levels[level][2], count=200})
+		end
 	end
 end
 
@@ -155,8 +178,8 @@ event.add(defines.events.on_entity_damaged,function (event)
 end)
 
 
-function create_turret(surface,enemy_force_name,x,y)
-	local turret=surface.create_entity{name = "gun-turret", force=enemy_force_name, position = {x,y}}
+function create_turret(surface,entity_name,enemy_force_name,x,y)
+	local turret=surface.create_entity{name = entity_name, force=enemy_force_name, position = {x,y}}
 	
 	for i=-2,1
 	do

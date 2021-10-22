@@ -28,6 +28,9 @@ local prizes={
 	{"personal-laser-defense-equipment",1},
 	{"modular-armor",5},
 	{"artillery-shell",5},
+	{"solar-panel-equipment",10},
+	{"fusion-reactor-equipment",1},
+	{"battery",100},
 }
 
 function Public.noises(args)
@@ -55,6 +58,24 @@ function Public.terrain(args)
 		args.tiles[#args.tiles + 1] = {name = 'water', position = args.p}
 		return
 	end
+	
+	if p.x == -16 and p.y == -16 then
+		-- TODO: integrate this with Fortress.create_turret
+		args.entities[#args.entities + 1] = {name = 'gun-turret', position = args.p, visible_on_overworld = true} 
+		--[[
+		for i=-2,1
+		do
+			args.entities[#args.entities + 1] = {name = "stone-wall", position = {p.x+i*11,p.y-2*11}, visible_on_overworld = true}
+			args.entities[#args.entities + 1] = {name = "stone-wall", position = {p.x+i*11,p.y+1*11}, visible_on_overworld = true}
+		end
+			
+		for i=-1,0
+		do
+			args.entities[#args.entities + 1] = {name = "stone-wall", position = {p.x-2*11,p.y+i*11}, visible_on_overworld = true}
+			args.entities[#args.entities + 1] = {name = "stone-wall", position = {p.x+1*11,p.y+i*11}, visible_on_overworld = true}
+		end
+		--]]
+	end 
 	
 	if noises.height(p) < 0.1 then
 		args.tiles[#args.tiles + 1] = {name = 'sand-1', position = args.p}
@@ -128,9 +149,9 @@ function Public.break_rock(surface, p, entity_name)
 	return Ores.try_ore_spawn(surface, p, entity_name, 6)
 end
 
-
 function Public.generate_silo_position()
 	--local boatposition = memory.boat.position
+	local overworld_progression=Common.overworldx()/40
 	local destination = Common.current_destination()
 	local island_center = destination.static_params.islandcenter_position
 	local width = destination.static_params.width
@@ -139,7 +160,8 @@ function Public.generate_silo_position()
 	local max_wall_distance=9
 	local p
 	local corner = {}
-	local layers=2
+	local layers=math.min(math.max(1,math.floor(0.25*(overworld_progression))),2)
+	local level=math.min(math.max(1,math.floor(0.1*(overworld_progression))),10)
 
 	p=Hunt.free_position_1(0.8,0)
 	
@@ -149,13 +171,14 @@ function Public.generate_silo_position()
 		r = max_wall_distance*(layers+1)
 	}
 	
-	Fortress.create_fortress(p.x,p.y,max_wall_distance,layers)
+	Fortress.create_fortress(p.x,p.y,max_wall_distance,layers,10)
 	
 	return p
 end 
 
 function Public.spawn_structures(destination,points_to_avoid)
-	local specials = 2
+	local overworld_progression=Common.overworldx()/40
+	local num_specials = math.min(math.max(1,math.floor(0.25*(overworld_progression))),4)
 	local island_center = destination.static_params.islandcenter_position
 	local surface = game.surfaces[destination.surface_name]
 	-- TODO: export this into memory.ancient_force
@@ -169,7 +192,7 @@ function Public.spawn_structures(destination,points_to_avoid)
 	local max_wall_distance=5
 	local layers=1
 	
-	for i=1,specials
+	for i=1,num_specials
 	do
 		local p=Hunt.mid_farness_position_1(args,points_to_avoid)
 		
@@ -178,12 +201,8 @@ function Public.spawn_structures(destination,points_to_avoid)
 			y = math.floor(p.y),
 			r = max_wall_distance*(layers+1)
 		}
-	    --Common.ensure_chunks_at(surface, p2, 0.01)
-		
-		--local x=math.floor(island_center.x+math.random(-20,20))
-		--local y=math.floor(island_center.y+math.random(-height/4,height/4))
-		
-		Fortress.create_fortress(p.x,p.y,max_wall_distance,1)
+
+		Fortress.create_fortress(p.x,p.y,max_wall_distance,1,i)
 		local chest = surface.create_entity {name="wooden-chest", force=ancient_force, position = {p.x,p.y}}
 		local prize = prizes[math.floor(math.random(1,#prizes))]
 		
