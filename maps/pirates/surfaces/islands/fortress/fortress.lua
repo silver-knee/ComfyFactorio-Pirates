@@ -11,12 +11,24 @@ local inspect = require 'utils.inspect'.inspect
 local Ores = require 'maps.pirates.ores'
 local IslandsCommon = require 'maps.pirates.surfaces.islands.common'
 local Hunt = require 'maps.pirates.surfaces.islands.hunt'
-local event = require 'utils.event'
+local Fortress = require 'maps.pirates.structures.island_structures.fortress.fortress'
 
 
 local Public = {}
-Public.Data = require 'maps.pirates.surfaces.islands.first.data'
+Public.Data = require 'maps.pirates.surfaces.islands.fortress.data'
 
+local prizes={
+	{"power-armor",1},
+	{"steel-plate",100*50},
+	{"plastic-bar",100*50},
+	{"defender-capsule",50},
+	{"distractor-capsule",20},
+	{"advanced-circuit",100},
+	{"processing-unit",20},
+	{"personal-laser-defense-equipment",1},
+	{"modular-armor",5},
+	{"artillery-shell",5},
+}
 
 function Public.noises(args)
 	local ret = {}
@@ -95,6 +107,8 @@ end
 
 
 function Public.chunk_structures(args)
+	local destination = Common.current_destination()
+	local surface = game.surfaces[destination.surface_name]
 
 	local spec = function(p)
 		local noises = Public.noises{p = p, noise_generator = args.noise_generator, static_params = args.static_params, seed = args.seed}
@@ -106,6 +120,7 @@ function Public.chunk_structures(args)
 	end
 
 	IslandsCommon.enemies_1(args, spec, false, 0.3)
+	
 end
 
 
@@ -115,184 +130,92 @@ end
 
 
 function Public.generate_silo_position()
-	local memory = Memory.get_crew_memory()
-	local enemy_force_name = memory.enemy_force_name
-	local destination = Common.current_destination()
-	local surface = game.surfaces[destination.surface_name]
 	--local boatposition = memory.boat.position
+	local memory = Memory.get_crew_memory()
+	local destination = Common.current_destination()
 	local island_center = destination.static_params.islandcenter_position
-	local i, x,	y, item
-	local wall_distance
-	local wall_distance_step=9
-	local max_wall_distance=wall_distance_step*2
-	local lawn_mower=5
-	local doorway=2
-	local turrets={}
+	local width = destination.static_params.width
+	local height = destination.static_params.height
+	local surface = game.surfaces[destination.surface_name]
+	-- TODO: export this into memory.ancient_force
+	local ancient_force = string.format('ancient-friendly-%03d', memory.id) 
+	local max_wall_distance=9
+	local p
+	local corner = {}
+	local layers=2
+	local i
+	local specials = 2
 
-	local p = {
-		x = math.floor(island_center.x),
-		y = math.floor(island_center.y),
+	
+--	local p = Hunt.position_away_from_players_1(destination)
+--	p.r=max_wall_distance*3
+--[[	
+	local tries=0
+	local valid_place
+	repeat
+		valid_place=true
+		p = {
+			x = math.floor(math.min(island_center.x+width/4+math.random(-max_wall_distance*layers,0),island_center.x+width/2)),
+			y = math.floor(island_center.y+math.random(-max_wall_distance*layers,max_wall_distance*layers)),
+			r = max_wall_distance*3
+		}
+		
+		if valid_place and p.x+max_wall_distance*layers > island_center.x+width/2 then valid_place=false end
+		game.print(valid_place and ("valid: " .. p.x) or ("invalid: " .. p.x))
+
+		if valid_place
+		then
+			corner[1]=surface.get_tile(p.x+max_wall_distance*layers,p.y-max_wall_distance*layers)
+			corner[2]=surface.get_tile(p.x-max_wall_distance*layers,p.y+max_wall_distance*layers)
+			corner[3]=surface.get_tile(p.x+max_wall_distance*layers,p.y+max_wall_distance*layers)
+			corner[4]=surface.get_tile(p.x-max_wall_distance*layers,p.y-max_wall_distance*layers)
+			
+			for i=1,#corner
+			do
+				if valid_place and (corner[i] == nil or corner[i].valid) then valid_place=false end
+				game.print(valid_place and corner[i].name or "invalid")
+				if valid_place and not corner[i].collides_with("ground-tile") then valid_place=false end
+			end
+		end
+				
+		tries=tries+1
+	until tries>500 or valid_place
+	
+	if tries>500 
+	then
+		if _DEBUG 
+		then
+			game.print("Tried to place silo fortress 500 times and failed")
+		end
+		
+
+	end
+]]--	
+
+	p=Hunt.free_position_1(0.75,0)
+	
+	p = {
+		x = math.floor(p.x),
+		y = math.floor(p.y),
 		r = max_wall_distance*3
 	}
 	
-	game.print(island_center.x .. " - " .. island_center.y)
+	Fortress.create_fortress(p.x,p.y,max_wall_distance,layers)
 	
-	local area=surface.find_entities({{p.x-max_wall_distance-lawn_mower,p.y-max_wall_distance-lawn_mower},{p.x+max_wall_distance+lawn_mower,p.y+max_wall_distance+lawn_mower}})
-	for i=1,#area
+	for i=1,specials
 	do
-		area[i].destroy()
+		local x=math.floor(island_center.x+math.random(-20,20))
+		local y=math.floor(island_center.y+math.random(-height/4,height/4))
+		
+		Fortress.create_fortress(x,y,5,1)
+		local chest = surface.create_entity {name="wooden-chest", force=ancient_force, position = {x,y}}
+		local prize = prizes[math.floor(math.random(1,#prizes))]
+		
+		chest.insert({name=prize[1],count=prize[2]})
 	end
 
-	local tiles={}
-	for x=-max_wall_distance,max_wall_distance
-	do
-		for y=-max_wall_distance,max_wall_distance
-		do
-			tiles[#tiles+1]={position={p.x+x,p.y+y},name="refined-concrete"}
-		end
-	end	
-	
-	surface.set_tiles(tiles, true, true)	
-
-	local rings={}
-	for wall_distance=wall_distance_step,max_wall_distance,wall_distance_step
-	do
-		local ring_turrets={}
-		local ring_walls={}
-	
-		for i=-wall_distance+1,wall_distance-1
-		do
-			-- is math.abs() unnecessary slow here?
-			if i>=-doorway and i<=doorway
-			then
-				item="gate"
-			else
-				item="stone-wall"
-			end
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x+i,p.y-wall_distance-1}, direction = defines.direction.west}
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x+i,p.y-wall_distance}, direction = defines.direction.west} 
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x+i,p.y+wall_distance+1}, direction = defines.direction.west}
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x+i,p.y+wall_distance}, direction = defines.direction.west}
-		end		
-
-		for i=-wall_distance+1,wall_distance-1
-		do
-			if i>=-doorway and i<=doorway
-			then
-				item="gate"
-			else
-				item="stone-wall"
-			end
-		
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x-wall_distance-1,p.y+i}} 
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x-wall_distance,p.y+i}} 
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x+wall_distance+1,p.y+i}}
-			ring_walls[#ring_walls+1]=surface.create_entity{name = item, force=enemy_force_name, position = {p.x+wall_distance,p.y+i}}
-		end
-		--small-worm-turret
-		game.print(p.x+wall_distance+1 .. " - " .. p.y+wall_distance+1)
-		-- 136,9 -- 144,17 position correct, walls around turret off
-
-		ring_turrets[1] = create_turret(surface,enemy_force_name,p.x+wall_distance+1,p.y+wall_distance+1)
-		ring_turrets[2] = create_turret(surface,enemy_force_name,p.x+wall_distance+1,p.y-wall_distance)
-		ring_turrets[3] = create_turret(surface,enemy_force_name,p.x-wall_distance  ,p.y+wall_distance+1)
-		ring_turrets[4] = create_turret(surface,enemy_force_name,p.x-wall_distance  ,p.y-wall_distance)
-		
-		
-		for i=1,#ring_turrets
-		do
-			turrets[#turrets+1] = ring_turrets[i]
-		end
-		
-		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {p.x+Math.random(-wall_distance+4,wall_distance-5),p.y-wall_distance-4}}
-		surface.create_entity {name = 'spitter-spawner', force=enemy_force_name, position = {p.x+Math.random(-wall_distance+4,wall_distance-5),p.y+wall_distance+5}}
-		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {p.x-wall_distance-4,p.y+Math.random(-wall_distance+4,wall_distance-5)}}
-		surface.create_entity {name = 'biter-spawner', force=enemy_force_name, position = {p.x+wall_distance+5,p.y+Math.random(-wall_distance+4,wall_distance-5)}}
-		
-		rings[#rings+1]={
-			ring_turrets=ring_turrets,
-			ring_walls=ring_walls
-		}
-	end
-	
-	destination.dynamic_data.rings=rings
-	
-	
-	for i=1,#turrets
-	do
-		turrets[i].insert({name="firearm-magazine", count=200})
-	end
-	
 	return p
 end 
 
-function create_turret(surface,enemy_force_name,x,y)
-	local turret=surface.create_entity{name = "gun-turret", force=enemy_force_name, position = {x,y}}
-	
-	for i=-2,1
-	do
-		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x+i,y-2}}
-		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x+i,y+1}}
-	end
-		
-	for i=-1,0
-	do
-		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x-2,y+i}}
-		surface.create_entity{name = "stone-wall", force=enemy_force_name, position = {x+1,y+i}}
-	end
-	
-	return turret
-end
-
-event.add(defines.events.on_entity_damaged,function (event)
-	local destination = Common.current_destination()
-	local memory = Memory.get_crew_memory()
-	local enemy_force_name = memory.enemy_force_name
-	local rings=destination.dynamic_data.rings 
-	local i,j
-	local stay_open=60*3
-	
-	if _DEBUG and rings == nil then
-		game.print("No rings")
-	end
-	
-	if rings == nil then return end
-	
---	game.print("--------")
---	game.print("rings "..#rings)
---	game.print(event.entity.valid)
---	if event.entity.valid then
---		game.print(event.entity.unit_number)
---	end
-	
-	
-	for j=1,#rings
-	do
-		local ring_turrets=rings[j].ring_turrets
-		local ring_walls=rings[j].ring_walls
-		local found=false
-		for i=1,#ring_turrets
-		do
-			--game.print(j.." "..i..": "..((ring_turrets[i].valid and "true") or "false"))
-			--if ring_turrets[i].valid then
-			--	game.print(ring_turrets[i].unit_number .. " - " .. (((ring_turrets[i].valid and ring_turrets[i] == event.entity) and "true") or "false"))
-			--end
-
-			if ring_turrets[i].valid and event.entity == ring_turrets[i]
-			then
-				found=true
-				break
-			end
-		end
-		
-		--game.print(found)
-		if found then 
-			for i=1,#ring_walls
-			do
-				if ring_walls[i].valid and ring_walls[i].name == "gate" then ring_walls[i].request_to_open(enemy_force_name,stay_open) end
-			end
-		end
-	end
-end)
 
 return Public

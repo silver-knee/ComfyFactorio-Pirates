@@ -7,8 +7,8 @@ local Public = {}
 
 Public.display_names = {'Fortress'}
 
-Public.terraingen_frame_width = 325
-Public.terraingen_frame_height = 325
+Public.terraingen_frame_width = 800
+Public.terraingen_frame_height = 800
 Public.static_params_default = {
 	starting_time_of_day = 0,
 	daynightcycletype = 1,
@@ -53,7 +53,7 @@ Public.noiseparams = {
 		type = 'forest1',
 		normalised = true,
 		params = {
-			{upperscale = 70, amplitude = 1},
+			{upperscale = 70, amplitude = 0.7},
 		},
 	},
 
