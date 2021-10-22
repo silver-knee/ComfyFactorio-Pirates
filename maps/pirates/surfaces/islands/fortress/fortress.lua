@@ -151,7 +151,7 @@ end
 
 function Public.generate_silo_position()
 	--local boatposition = memory.boat.position
-	local overworld_progression=Common.overworldx()/40
+	local overworld_progression = Common.overworldx()/40
 	local destination = Common.current_destination()
 	local island_center = destination.static_params.islandcenter_position
 	local width = destination.static_params.width
@@ -168,7 +168,7 @@ function Public.generate_silo_position()
 	p = {
 		x = math.floor(p.x),
 		y = math.floor(p.y),
-		r = max_wall_distance*(layers+1)
+		r = find_radius(max_wall_distance,layers)
 	}
 	
 	Fortress.create_fortress(p.x,p.y,max_wall_distance,layers,level)
@@ -177,32 +177,32 @@ function Public.generate_silo_position()
 end 
 
 function Public.spawn_structures(destination,points_to_avoid)
-	local overworld_progression=Common.overworldx()/40
+	local overworld_progression = Common.overworldx()/40
 	local num_specials = math.min(math.max(1,math.floor(0.25*(overworld_progression))),4)
 	local island_center = destination.static_params.islandcenter_position
 	local surface = game.surfaces[destination.surface_name]
 	-- TODO: export this into memory.ancient_force
 	local memory = Memory.get_crew_memory()
 	local ancient_force = string.format('ancient-friendly-%03d', memory.id) 
-	local i
 	local args = {
 		static_params = destination.static_params,
 		noise_generator = Utils.noise_generator({}, 0),
 	}
 	local max_wall_distance=5
 	local layers=1
-	
+	local i, p
+
 	for i=1,num_specials
 	do
-		local p=Hunt.mid_farness_position_1(args,points_to_avoid)
+		p=Hunt.mid_farness_position_1(args,points_to_avoid)
 		
 		p = {
 			x = math.floor(p.x),
 			y = math.floor(p.y),
-			r = max_wall_distance*(layers+1)
+			r = find_radius(max_wall_distance,layers)
 		}
 
-		Fortress.create_fortress(p.x,p.y,max_wall_distance,1,i)
+		Fortress.create_fortress(p.x,p.y,max_wall_distance,1,i*2-1)
 		local chest = surface.create_entity {name="wooden-chest", force=ancient_force, position = {p.x,p.y}}
 		local prize = prizes[math.floor(math.random(1,#prizes))]
 		
@@ -213,5 +213,11 @@ function Public.spawn_structures(destination,points_to_avoid)
 
 end
 
+function find_radius(max_wall_distance,layers)
+	-- affected area: farthest layer + spawner size
+	local length=max_wall_distance*layers+7
+	local sqr=length*length
+	return math.sqrt(sqr+sqr)
+end
 
 return Public
