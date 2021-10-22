@@ -171,7 +171,7 @@ function Public.generate_silo_position()
 		r = max_wall_distance*(layers+1)
 	}
 	
-	Fortress.create_fortress(p.x,p.y,max_wall_distance,layers,10)
+	Fortress.create_fortress(p.x,p.y,max_wall_distance,layers,level)
 	
 	return p
 end 
