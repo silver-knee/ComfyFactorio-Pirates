@@ -131,91 +131,68 @@ end
 
 function Public.generate_silo_position()
 	--local boatposition = memory.boat.position
-	local memory = Memory.get_crew_memory()
 	local destination = Common.current_destination()
 	local island_center = destination.static_params.islandcenter_position
 	local width = destination.static_params.width
 	local height = destination.static_params.height
 	local surface = game.surfaces[destination.surface_name]
-	-- TODO: export this into memory.ancient_force
-	local ancient_force = string.format('ancient-friendly-%03d', memory.id) 
 	local max_wall_distance=9
 	local p
 	local corner = {}
 	local layers=2
-	local i
-	local specials = 2
 
-	
---	local p = Hunt.position_away_from_players_1(destination)
---	p.r=max_wall_distance*3
---[[	
-	local tries=0
-	local valid_place
-	repeat
-		valid_place=true
-		p = {
-			x = math.floor(math.min(island_center.x+width/4+math.random(-max_wall_distance*layers,0),island_center.x+width/2)),
-			y = math.floor(island_center.y+math.random(-max_wall_distance*layers,max_wall_distance*layers)),
-			r = max_wall_distance*3
-		}
-		
-		if valid_place and p.x+max_wall_distance*layers > island_center.x+width/2 then valid_place=false end
-		game.print(valid_place and ("valid: " .. p.x) or ("invalid: " .. p.x))
-
-		if valid_place
-		then
-			corner[1]=surface.get_tile(p.x+max_wall_distance*layers,p.y-max_wall_distance*layers)
-			corner[2]=surface.get_tile(p.x-max_wall_distance*layers,p.y+max_wall_distance*layers)
-			corner[3]=surface.get_tile(p.x+max_wall_distance*layers,p.y+max_wall_distance*layers)
-			corner[4]=surface.get_tile(p.x-max_wall_distance*layers,p.y-max_wall_distance*layers)
-			
-			for i=1,#corner
-			do
-				if valid_place and (corner[i] == nil or corner[i].valid) then valid_place=false end
-				game.print(valid_place and corner[i].name or "invalid")
-				if valid_place and not corner[i].collides_with("ground-tile") then valid_place=false end
-			end
-		end
-				
-		tries=tries+1
-	until tries>500 or valid_place
-	
-	if tries>500 
-	then
-		if _DEBUG 
-		then
-			game.print("Tried to place silo fortress 500 times and failed")
-		end
-		
-
-	end
-]]--	
-
-	p=Hunt.free_position_1(0.75,0)
+	p=Hunt.free_position_1(0.8,0)
 	
 	p = {
 		x = math.floor(p.x),
 		y = math.floor(p.y),
-		r = max_wall_distance*3
+		r = max_wall_distance*(layers+1)
 	}
 	
 	Fortress.create_fortress(p.x,p.y,max_wall_distance,layers)
 	
+	return p
+end 
+
+function Public.spawn_structures(destination,points_to_avoid)
+	local specials = 2
+	local island_center = destination.static_params.islandcenter_position
+	local surface = game.surfaces[destination.surface_name]
+	-- TODO: export this into memory.ancient_force
+	local memory = Memory.get_crew_memory()
+	local ancient_force = string.format('ancient-friendly-%03d', memory.id) 
+	local i
+	local args = {
+		static_params = destination.static_params,
+		noise_generator = Utils.noise_generator({}, 0),
+	}
+	local max_wall_distance=5
+	local layers=1
+	
 	for i=1,specials
 	do
-		local x=math.floor(island_center.x+math.random(-20,20))
-		local y=math.floor(island_center.y+math.random(-height/4,height/4))
+		local p=Hunt.mid_farness_position_1(args,points_to_avoid)
 		
-		Fortress.create_fortress(x,y,5,1)
-		local chest = surface.create_entity {name="wooden-chest", force=ancient_force, position = {x,y}}
+		p = {
+			x = math.floor(p.x),
+			y = math.floor(p.y),
+			r = max_wall_distance*(layers+1)
+		}
+	    --Common.ensure_chunks_at(surface, p2, 0.01)
+		
+		--local x=math.floor(island_center.x+math.random(-20,20))
+		--local y=math.floor(island_center.y+math.random(-height/4,height/4))
+		
+		Fortress.create_fortress(p.x,p.y,max_wall_distance,1)
+		local chest = surface.create_entity {name="wooden-chest", force=ancient_force, position = {p.x,p.y}}
 		local prize = prizes[math.floor(math.random(1,#prizes))]
 		
 		chest.insert({name=prize[1],count=prize[2]})
+		
+		points_to_avoid[#points_to_avoid + 1] = p
 	end
 
-	return p
-end 
+end
 
 
 return Public

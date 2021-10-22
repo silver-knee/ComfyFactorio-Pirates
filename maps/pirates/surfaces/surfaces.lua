@@ -239,10 +239,6 @@ function Public.destination_on_arrival(destination)
 		memory.scripted_unit_groups = {}
 		memory.floating_pollution = 0
 
-		if destination.subtype == Islands.enum.RADIOACTIVE then
-			Islands[Islands.enum.RADIOACTIVE].spawn_structures()
-		end
-
 		if destination and destination.surface_name and game.surfaces[destination.surface_name] and game.surfaces[destination.surface_name].valid and (not (destination.dynamic_data and destination.dynamic_data.initial_spawner_count)) then
 			--Note: This gives the wrong answer on the first island. Because the terrain hasn't finished generating yet.
 			destination.dynamic_data.initial_spawner_count = Common.spawner_count(game.surfaces[destination.surface_name])
@@ -297,6 +293,10 @@ function Public.destination_on_arrival(destination)
 		
 		Islands.spawn_treasure_maps(destination, points_to_avoid)
 		Islands.spawn_ghosts(destination, points_to_avoid)
+		
+		if Islands[destination.subtype].spawn_structures then
+			Islands[destination.subtype].spawn_structures(destination, points_to_avoid)
+		end
 	end
 end
 
